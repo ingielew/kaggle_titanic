@@ -23,10 +23,10 @@ deck_ord_encoding = {
 }
 
 family_type_ord_encoding = {
-    "single_no_children": 0,
-    "single_carer": 1,
-    "couple_no_children": 2,
-    "couple_with_children": 3,
+    "single_no_child": 0,
+    "couple_no_child": 1,
+    "single_carer": 2,
+    "couple_w_child": 3,
     "child": 4
 }
 

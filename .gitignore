@@ -1,1 +1,7 @@
 /venv/
+figure*
+dump.raw
+0001.model
+result*
+/.idea/
+*png

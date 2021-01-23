@@ -4,28 +4,37 @@ from re import sub
 import pandas
 
 
-def preprocess(data_frame):
+def preprocess(data_frame, family_encoding_ordinal=False):
     passenger_deck_df = extract_deck(data_frame)
+    data_frame['Deck'] = passenger_deck_df['Deck']
     handle_age(data_frame)
     families = identify_families(data_frame)
+    data_frame['FamilyType'] = families['FamilyType']
     adjust_fare_per_person(data_frame)
     extract_ticket_code(data_frame)
     encoding.ordinal_encode_embarked(data_frame)
     data_frame = encoding.one_hot_encode(data_frame, 'Sex')
     data_frame = encoding.one_hot_encode(data_frame, 'Ticket')
+
+    if family_encoding_ordinal:
+        encoding.ordinal_encode_family(data_frame)
+    else:
+        data_frame = encoding.one_hot_encode(data_frame, 'FamilyType')
     data_frame['Deck'] = passenger_deck_df['Deck']
-    data_frame['FamilyType'] = families['FamilyType']
-    remove_redundant_columns(data_frame)
+    remove_redundant_columns(data_frame, family_encoding_ordinal)
     return data_frame
 
 
-def remove_redundant_columns(data_frame):
+def remove_redundant_columns(data_frame, family_encoding_ordinal=False):
     del data_frame['Name']
     del data_frame['PassengerId']
     del data_frame['Ticket']
     del data_frame['Embarked']
     del data_frame['Cabin']
     del data_frame['Sex']
+
+    if family_encoding_ordinal is False:
+        del data_frame['FamilyType']
 
 
 def handle_age(data_frame):
@@ -61,19 +70,19 @@ def identify_families(data_frame):
         passenger_record['PassengerId'] = data_frame.at[i, 'PassengerId']
 
         if sibsp == 0 and parch == 0:
-            passenger_record['FamilyType'] = common_const.family_type_ord_encoding['single_no_children']
+            passenger_record['FamilyType'] = 'single_no_child'
         elif sibsp > 0 and parch == 0:
-            if data_frame.at[i, 'Age'] <= 18:
-                passenger_record['FamilyType'] = common_const.family_type_ord_encoding['child']
+            if data_frame.at[i, 'Age'] <= 14:
+                passenger_record['FamilyType'] = 'child'
             else:
-                passenger_record['FamilyType'] = common_const.family_type_ord_encoding['couple_no_children']
+                passenger_record['FamilyType'] = 'couple_no_child'
         elif sibsp > 0 and parch > 0:
-            if data_frame.at[i, 'Age'] <= 18:
-                passenger_record['FamilyType'] = common_const.family_type_ord_encoding['child']
+            if data_frame.at[i, 'Age'] <= 14:
+                passenger_record['FamilyType'] = 'child'
             else:
-                passenger_record['FamilyType'] = common_const.family_type_ord_encoding['couple_with_children']
+                passenger_record['FamilyType'] = 'couple_w_child'
         else:
-            passenger_record['FamilyType'] = common_const.family_type_ord_encoding['single_carer']
+            passenger_record['FamilyType'] = 'single_carer'
         family_df = family_df.append(passenger_record, ignore_index=True)
 
     return family_df
@@ -104,17 +113,14 @@ def extract_deck(data_frame):
             passenger_record['Deck'] = common_const.deck_ord_encoding[str(data_frame.at[i, 'Cabin'])[0]]
 
         decks_df = decks_df.append(passenger_record, ignore_index=True)
-
     return decks_df
 
 
 def extract_ticket_code(data_frame):
     for i in data_frame.index:
         if str(data_frame.at[i, 'Ticket']).lower().islower():  # check if contains any non-numbers
-            ticket_id = sub("[^a-zA-Z]", "", data_frame.at[i, 'Ticket'])[0:1]
+            ticket_id = sub("[^a-zA-Z]", "", data_frame.at[i, 'Ticket'])[0:1]  # only first letter for encoding to group
             data_frame.at[i, 'Ticket'] = ticket_id
         else:
             ticket_id = "NA"
             data_frame.at[i, 'Ticket'] = ticket_id
-
-    dummies = pandas.get_dummies(data_frame['Ticket'])

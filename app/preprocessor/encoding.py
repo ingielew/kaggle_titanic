@@ -27,3 +27,8 @@ def one_hot_encode(data_frame, col_name):
                                 pandas.get_dummies(data_frame['{}'.format(col_name)],
                                                    prefix='{}'.format(col_name))], axis=1)
     return data_frame
+
+
+def ordinal_encode_family(data_frame):
+    for i in data_frame.index:
+        data_frame.at[i, 'FamilyType'] = common_const.family_type_ord_encoding[data_frame.at[i, 'FamilyType']]
